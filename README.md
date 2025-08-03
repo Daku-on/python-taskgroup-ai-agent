@@ -40,9 +40,9 @@ Python TaskGroup + Google API連携による完全自動化された面接スケ
 git clone https://github.com/your-username/python-taskgroup-ai-agent.git
 cd python-taskgroup-ai-agent
 
-# Google認証設定
+# Google認証設定（詳細は下記のOAuth設定セクション参照）
 cp credentials.example.json credentials.json
-# ↑ Google Cloud Consoleからダウンロードした認証情報を配置
+# ↑ Google Cloud Consoleで作成・ダウンロードしたOAuth認証情報を配置
 
 # 一発起動
 make full
@@ -73,21 +73,79 @@ make frontend  # Frontend development server
 
 ## 🔐 Google OAuth認証設定
 
-### 1. Google Cloud Console設定
+### 1. Google Cloud Console設定（詳細手順）
 
+#### ステップ1: プロジェクト作成
 ```bash
-# 1. Google Cloud Consoleでプロジェクト作成
-# https://console.cloud.google.com/
+1. https://console.cloud.google.com/ にアクセス
+2. 「プロジェクトを選択」→「新しいプロジェクト」
+3. プロジェクト名: interview-scheduler (お好みで)
+4. 「作成」をクリック
+```
 
-# 2. 必要なAPIを有効化
-- Google Calendar API
-- Gmail API  
-- Google Meet API (自動で有効化)
+#### ステップ2: APIを有効化
+```bash
+1. 左メニュー「APIs & Services」→「ライブラリ」
+2. 以下のAPIを検索して有効化:
+   ✅ Google Calendar API → 「有効にする」
+   ✅ Gmail API → 「有効にする」
+   ✅ Google People API → 「有効にする」（オプション）
+   
+# Google Meet APIは自動で有効化されます
+```
 
-# 3. OAuth 2.0認証情報作成
-- 認証情報 → OAuth 2.0 クライアントID作成
-- アプリケーションタイプ: Webアプリケーション
-- 承認済みリダイレクトURI: http://localhost:8000/auth/callback
+#### ステップ3: OAuth同意画面設定
+```bash
+1. 左メニュー「APIs & Services」→「OAuth同意画面」
+2. User Type: 「外部」を選択（個人用）or「内部」（企業用）
+3. 必須項目入力:
+   - アプリ名: Interview Scheduler
+   - ユーザーサポートメール: あなたのメール
+   - デベロッパー連絡先: あなたのメール
+4. 「保存して次へ」
+
+5. スコープページ:
+   - 「スコープを追加または削除」
+   - 以下を追加:
+     ✅ ../auth/calendar
+     ✅ ../auth/gmail.send  
+     ✅ ../auth/userinfo.email
+6. 「保存して次へ」
+```
+
+#### ステップ4: OAuth認証情報作成 & ダウンロード
+```bash
+1. 左メニュー「APIs & Services」→「認証情報」
+2. 「+ 認証情報を作成」→「OAuth 2.0 クライアント ID」
+3. 設定項目:
+   - アプリケーションタイプ: Webアプリケーション
+   - 名前: Interview Scheduler OAuth
+   
+4. 承認済みJavaScript生成元:
+   http://localhost:3000
+   http://localhost:5173
+   
+5. 承認済みリダイレクトURI:
+   http://localhost:8000/auth/callback
+   http://localhost:3000/auth/callback
+
+6. 「作成」をクリック
+
+7. 🔽 重要: 「JSONをダウンロード」をクリック
+   → credentials.json ファイルを保存
+```
+
+#### ステップ5: 認証ファイル配置
+```bash
+# ダウンロードしたファイルをプロジェクトルートに配置
+mv ~/Downloads/client_secret_XXXXX.json ./credentials.json
+
+# または手動でコピー
+cp ~/Downloads/client_secret_XXXXX.json credentials.json
+
+# ファイル配置確認
+ls -la credentials.json
+# -rw-r--r-- 1 user user 1234 Dec 15 10:00 credentials.json
 ```
 
 ### 2. Google Workspace SSO対応
@@ -131,6 +189,12 @@ GOOGLE_SSO_DOMAIN=your-company.com  # 自社ドメイン指定
 GOOGLE_SSO_AUTO_LOGIN=true         # 自動ログイン有効
 GOOGLE_ADMIN_EMAIL=admin@your-company.com  # 管理者メール
 ```
+
+### ⚠️ 初回セットアップの注意
+
+**初めて使用する場合は、まず [🔐 Google OAuth認証設定](#-google-oauth認証設定) を完了してください。**
+
+Google Cloud Consoleで認証情報を作成し、`credentials.json`をプロジェクトルートに配置する必要があります。
 
 ## 🎯 使用方法
 
@@ -248,6 +312,49 @@ uv run mypy src/
 
 # 一括チェック
 make test
+```
+
+### 🚨 よくあるエラーと解決法
+
+#### 1. `credentials.json` 関連エラー
+```bash
+# エラー: FileNotFoundError: credentials.json
+# 解決: OAuth認証情報を正しく配置
+
+1. Google Cloud Consoleから credentials.json をダウンロード
+2. プロジェクトルートに配置
+3. ファイル名が正確に credentials.json であることを確認
+```
+
+#### 2. `redirect_uri_mismatch` エラー
+```bash
+# エラー: The redirect URI in the request does not match
+# 解決: Google Cloud ConsoleでリダイレクトURIを追加
+
+OAuth設定画面で以下を追加:
+http://localhost:8000/auth/callback
+http://localhost:3000/auth/callback
+```
+
+#### 3. `access_blocked` エラー  
+```bash
+# エラー: This app is blocked
+# 解決: OAuth同意画面の設定完了
+
+1. Google Cloud Console → OAuth同意画面
+2. アプリ名、メールアドレス等を設定
+3. 必要なスコープを追加
+4. テストユーザーを追加（開発中の場合）
+```
+
+#### 4. `API not enabled` エラー
+```bash
+# エラー: Calendar API has not been used
+# 解決: 必要なAPIを有効化
+
+Google Cloud Console → APIs & Services → ライブラリで以下を有効化:
+✅ Google Calendar API
+✅ Gmail API
 ```
 
 ## 🏗️ アーキテクチャ
