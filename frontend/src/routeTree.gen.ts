@@ -7,10 +7,12 @@ import { Route as indexRoute } from './routes/index';
 import { Route as tasksRoute } from './routes/tasks';
 import { Route as servicesRoute } from './routes/services';
 import { Route as monitoringRoute } from './routes/monitoring';
+import { Route as interviewsRoute } from './routes/interviews';
 
 export const routeTree = rootRoute.addChildren({
   '/': indexRoute,
   '/tasks': tasksRoute,
   '/services': servicesRoute,
   '/monitoring': monitoringRoute,
+  '/interviews': interviewsRoute,
 });

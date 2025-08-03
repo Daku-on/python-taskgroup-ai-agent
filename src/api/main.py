@@ -16,6 +16,11 @@ from ..services.agent_services import (
     DatabaseService,
     RAGAgentService,
 )
+from ..services.interview_services import (
+    InterviewOrchestratorService,
+    GoogleCalendarService,
+    GmailService,
+)
 from ..agent.base import Task
 
 
@@ -86,6 +91,31 @@ class WorkflowRequest(BaseModel):
     steps: List[Dict]
 
 
+class InterviewRequest(BaseModel):
+    """面接スケジューリングリクエスト。"""
+    
+    candidate_name: str
+    candidate_email: str
+    interviewer_names: List[str]
+    interviewer_emails: List[str]
+    duration_minutes: int = 60
+    preferred_dates: Optional[List[str]] = None
+    auto_select: bool = True
+
+
+class InterviewResponse(BaseModel):
+    """面接スケジューリングレスポンス。"""
+    
+    request_id: str
+    status: str
+    scheduled_time: Optional[str] = None
+    meet_link: Optional[str] = None
+    calendar_event_id: Optional[str] = None
+    email_message_id: Optional[str] = None
+    available_slots: Optional[List[Dict]] = None
+    error: Optional[str] = None
+
+
 # グローバル変数
 registry: Optional[ServiceRegistry] = None
 orchestrator: Optional[OrchestratorService] = None
@@ -114,9 +144,25 @@ async def lifespan(app: FastAPI):
         name="rag-agent-service"
     )
     
+    # Interview services
+    interview_service = InterviewOrchestratorService(
+        name="interview-orchestrator-service"
+    )
+    
+    calendar_service = GoogleCalendarService(
+        name="google-calendar-service"
+    )
+    
+    gmail_service = GmailService(
+        name="gmail-service"
+    )
+    
     await registry.register_service(llm_service)
     await registry.register_service(db_service)
     await registry.register_service(rag_service)
+    await registry.register_service(interview_service)
+    await registry.register_service(calendar_service)
+    await registry.register_service(gmail_service)
     
     # オーケストレーター作成
     orchestrator = OrchestratorService(registry)
@@ -191,7 +237,10 @@ async def execute_task(request: TaskRequest):
     service_mapping = {
         "llm": "llm-agent-service",
         "database": "database-service", 
-        "rag": "rag-agent-service"
+        "rag": "rag-agent-service",
+        "interview": "interview-orchestrator-service",
+        "calendar": "google-calendar-service",
+        "gmail": "gmail-service"
     }
     
     service_name = service_mapping.get(request.agent_type)
@@ -222,6 +271,108 @@ async def execute_task(request: TaskRequest):
             created_at=result_task.created_at.isoformat(),
             completed_at=result_task.completed_at.isoformat() if result_task.completed_at else None
         )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/interviews/schedule", response_model=InterviewResponse)
+async def schedule_interview(request: InterviewRequest):
+    """面接を自動スケジューリング。"""
+    if not registry:
+        raise HTTPException(status_code=503, detail="Service registry not available")
+    
+    service = registry._services.get("interview-orchestrator-service")
+    if not service:
+        raise HTTPException(status_code=404, detail="Interview service not found")
+    
+    try:
+        # 日付文字列をdatetimeに変換
+        preferred_dates = None
+        if request.preferred_dates:
+            from datetime import datetime
+            preferred_dates = [
+                datetime.fromisoformat(date) for date in request.preferred_dates
+            ]
+        
+        # 面接データを準備
+        interview_data = {
+            "candidate_name": request.candidate_name,
+            "candidate_email": request.candidate_email,
+            "interviewer_names": request.interviewer_names,
+            "interviewer_emails": request.interviewer_emails,
+            "duration_minutes": request.duration_minutes,
+            "preferred_dates": preferred_dates
+        }
+        
+        # 面接スケジューリング実行
+        result = await service.process_single_interview(interview_data)
+        
+        # WebSocket経由で進行状況を通知
+        await manager.broadcast(f"Interview scheduled for {request.candidate_name}")
+        
+        return InterviewResponse(
+            request_id=result.get("request_id", f"interview_{request.candidate_name}"),
+            status=result["status"],
+            scheduled_time=result.get("scheduled_time"),
+            meet_link=result.get("meet_link"),
+            calendar_event_id=result.get("calendar_event_id"),
+            email_message_id=result.get("email_message_id"),
+            error=result.get("error")
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/interviews/available-slots")
+async def get_available_slots(
+    candidate_email: str,
+    interviewer_emails: str,  # カンマ区切り
+    duration_minutes: int = 60,
+    days_ahead: int = 7
+):
+    """利用可能な面接時間枠を取得。"""
+    if not registry:
+        raise HTTPException(status_code=503, detail="Service registry not available")
+    
+    service = registry._services.get("google-calendar-service")
+    if not service:
+        raise HTTPException(status_code=404, detail="Calendar service not found")
+    
+    try:
+        from datetime import datetime, timedelta
+        
+        # 希望日程を生成（明日から指定日数）
+        tomorrow = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
+        preferred_dates = []
+        for i in range(days_ahead):
+            date = tomorrow + timedelta(days=i)
+            if date.weekday() < 5:  # 平日のみ
+                preferred_dates.append(date)
+        
+        # カレンダーサービスで空き時間検索
+        from ..agent.google_calendar_agent import find_interview_slots
+        
+        interviewer_list = [email.strip() for email in interviewer_emails.split(',')]
+        
+        slots = await find_interview_slots(
+            candidate_email=candidate_email,
+            interviewer_emails=interviewer_list,
+            duration_minutes=duration_minutes,
+            preferred_dates=preferred_dates
+        )
+        
+        return {
+            "available_slots": [
+                {
+                    "start": slot.start.isoformat(),
+                    "end": slot.end.isoformat(),
+                    "attendees": slot.attendees
+                }
+                for slot in slots
+            ]
+        }
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

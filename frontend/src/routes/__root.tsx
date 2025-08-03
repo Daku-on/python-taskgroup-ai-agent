@@ -4,7 +4,7 @@
 
 import { createRootRoute, Link, Outlet } from '@tanstack/react-router';
 import { TanStackRouterDevtools } from '@tanstack/router-devtools';
-import { Activity, Bot, Database, BarChart3, Home } from 'lucide-react';
+import { Activity, Bot, Database, BarChart3, Home, Calendar } from 'lucide-react';
 import { WebSocketProvider } from '../components/WebSocketProvider';
 import { NotificationToast } from '../components/NotificationToast';
 
@@ -51,6 +51,13 @@ export const Route = createRootRoute({
                   >
                     <BarChart3 className="w-4 h-4 mr-2" />
                     Monitoring
+                  </Link>
+                  <Link
+                    to="/interviews"
+                    className="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-900 border-b-2 border-transparent hover:border-gray-300 [&.active]:border-blue-500 [&.active]:text-blue-600"
+                  >
+                    <Calendar className="w-4 h-4 mr-2" />
+                    Interviews
                   </Link>
                 </div>
               </div>

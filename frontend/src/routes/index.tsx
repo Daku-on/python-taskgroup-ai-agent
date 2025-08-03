@@ -12,7 +12,8 @@ import {
   connectionStatusAtom 
 } from '../stores/atoms';
 import { useServices, useHealth } from '../hooks/useApi';
-import { Activity, CheckCircle, XCircle, Clock, Server, Zap } from 'lucide-react';
+import { Activity, CheckCircle, XCircle, Clock, Server, Zap, Calendar, ArrowRight } from 'lucide-react';
+import { Link } from '@tanstack/react-router';
 
 function DashboardPage() {
   const [services] = useAtom(servicesAtom);
@@ -130,6 +131,66 @@ function DashboardPage() {
               </dl>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="mb-8">
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">Quick Actions</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Link 
+            to="/interviews"
+            className="block bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg p-6 text-white hover:from-blue-600 hover:to-blue-700 transition-all duration-200 transform hover:scale-105"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="flex items-center mb-2">
+                  <Calendar className="w-6 h-6 mr-2" />
+                  <h3 className="text-lg font-semibold">Interview Scheduling</h3>
+                </div>
+                <p className="text-blue-100 text-sm">
+                  Complete automated interview scheduling with Google integration
+                </p>
+              </div>
+              <ArrowRight className="w-5 h-5" />
+            </div>
+          </Link>
+          
+          <Link 
+            to="/tasks"
+            className="block bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg p-6 text-white hover:from-purple-600 hover:to-purple-700 transition-all duration-200 transform hover:scale-105"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="flex items-center mb-2">
+                  <Activity className="w-6 h-6 mr-2" />
+                  <h3 className="text-lg font-semibold">Task Management</h3>
+                </div>
+                <p className="text-purple-100 text-sm">
+                  Execute and monitor AI agent tasks
+                </p>
+              </div>
+              <ArrowRight className="w-5 h-5" />
+            </div>
+          </Link>
+          
+          <Link 
+            to="/services"
+            className="block bg-gradient-to-r from-green-500 to-green-600 rounded-lg p-6 text-white hover:from-green-600 hover:to-green-700 transition-all duration-200 transform hover:scale-105"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="flex items-center mb-2">
+                  <Server className="w-6 h-6 mr-2" />
+                  <h3 className="text-lg font-semibold">Service Control</h3>
+                </div>
+                <p className="text-green-100 text-sm">
+                  Manage and monitor system services
+                </p>
+              </div>
+              <ArrowRight className="w-5 h-5" />
+            </div>
+          </Link>
         </div>
       </div>
 
