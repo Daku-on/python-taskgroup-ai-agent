@@ -6,7 +6,7 @@ readme = "README.md"
 authors = [
     { name = "Daku-on", email = "113434878+Daku-on@users.noreply.github.com" }
 ]
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 dependencies = [
     "aiohttp>=3.9.0",
     "asyncpg>=0.30.0",
@@ -25,10 +25,10 @@ dev = [
 
 [tool.ruff]
 line-length = 88
-target-version = "py311"
+target-version = "py312"
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.12"
 strict = false
 warn_return_any = false
 warn_unused_ignores = true
