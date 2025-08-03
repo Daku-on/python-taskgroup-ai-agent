@@ -147,6 +147,13 @@ class LLMAgentService(BaseService):
         else:
             raise ValueError(f"Unknown operation: {operation}")
 
+    async def process_single_task(self, task: Task) -> Task:
+        """単一タスクを直接処理（API用）。"""
+        if not self._llm_agent:
+            raise RuntimeError("LLM agent is not initialized")
+        
+        return await self._llm_agent.run_single_task(task)
+
 
 class RAGAgentService(BaseService):
     """RAGエージェントのサービス実装。"""
@@ -373,6 +380,13 @@ class RAGAgentService(BaseService):
         else:
             raise ValueError(f"Unknown operation: {operation}")
 
+    async def process_single_task(self, task: Task) -> Task:
+        """単一タスクを直接処理（API用）。"""
+        if not self._rag_agent:
+            raise RuntimeError("RAG agent is not initialized")
+        
+        return await self._rag_agent.run_single_task(task)
+
 
 class DatabaseService(BaseService):
     """データベースサービス実装。"""
@@ -459,3 +473,40 @@ class DatabaseService(BaseService):
 
         else:
             raise ValueError(f"Unknown operation: {operation}")
+
+    async def process_single_task(self, task: Task) -> Task:
+        """単一タスクを直接処理（API用）。"""
+        from datetime import datetime
+        
+        if not self._db_manager:
+            raise RuntimeError("Database manager is not initialized")
+        
+        # タスクデータからクエリを抽出
+        query = task.data.get("query", "")
+        category = task.data.get("category")
+        limit = task.data.get("limit", 5)
+        
+        try:
+            results = await self._db_manager.search_knowledge(query, category, limit)
+            
+            task.result = {
+                "query": query,
+                "results": [
+                    {
+                        "id": item.id,
+                        "title": item.title,
+                        "content": item.content,
+                        "category": item.category,
+                        "tags": item.tags,
+                    }
+                    for item in results
+                ],
+                "total_found": len(results),
+            }
+            task.completed_at = datetime.now()
+            
+        except Exception as e:
+            task.error = e
+            task.completed_at = datetime.now()
+        
+        return task

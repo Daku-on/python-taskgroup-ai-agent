@@ -1,0 +1,120 @@
+# Full stack Docker Compose configuration
+# 全スタック Docker Compose 設定
+
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15
+    container_name: ai-agent-postgres
+    environment:
+      POSTGRES_DB: agent_knowledge
+      POSTGRES_USER: agent_user
+      POSTGRES_PASSWORD: agent_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agent_user -d agent_knowledge"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - ai-agent-network
+
+  # Python Backend API
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: ai-agent-backend
+    environment:
+      - DATABASE_URL=postgresql://agent_user:agent_password@postgres:5432/agent_knowledge
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-3.5-turbo}
+      - OPENAI_API_URL=${OPENAI_API_URL:-https://api.openai.com/v1/chat/completions}
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./src:/app/src
+      - ./scripts:/app/scripts
+      - ./.env:/app/.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - ai-agent-network
+    restart: unless-stopped
+
+  # React Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: ai-agent-frontend
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - ai-agent-network
+    restart: unless-stopped
+
+  # Database Setup Service (runs once)
+  db-setup:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: ai-agent-db-setup
+    environment:
+      - DATABASE_URL=postgresql://agent_user:agent_password@postgres:5432/agent_knowledge
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: python database/setup_knowledge.py
+    volumes:
+      - ./database:/app/database
+      - ./src:/app/src
+    networks:
+      - ai-agent-network
+
+  # Optional: pgAdmin for database management
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: ai-agent-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_LISTEN_PORT: 80
+    ports:
+      - "8080:80"
+    depends_on:
+      - postgres
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - ai-agent-network
+    profiles:
+      - admin
+
+volumes:
+  postgres_data:
+  pgadmin_data:
+
+networks:
+  ai-agent-network:
+    driver: bridge

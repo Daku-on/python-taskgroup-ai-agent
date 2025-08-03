@@ -1,24 +1,25 @@
-"""Example of a simple AI agent using TaskGroup."""
+"""TaskGroupを使用したシンプルなAIエージェントの例。"""
 
 import asyncio
 import random
 from typing import Any
 import sys
-sys.path.insert(0, '..')
+
+sys.path.insert(0, "..")
 
 from src.agent.base import BaseAgent, Task
 
 
 class SimpleAIAgent(BaseAgent):
-    """Simple AI agent that simulates API calls."""
-    
+    """シンプルなAIエージェント（APIコールをシミュレート）。"""
+
     async def process_task(self, task: Task) -> Any:
-        """Simulate processing an AI task with random delay."""
-        # Simulate API call delay
+        """ランダムな遅延でAIタスク処理をシミュレート。"""
+        # APIコールの遅延をシミュレート
         delay = random.uniform(0.5, 2.0)
         await asyncio.sleep(delay)
-        
-        # Simulate different task types
+
+        # 異なるタスクタイプをシミュレート
         if task.data.get("type") == "generate":
             return f"Generated response for prompt: {task.data.get('prompt', 'N/A')}"
         elif task.data.get("type") == "analyze":
@@ -28,27 +29,43 @@ class SimpleAIAgent(BaseAgent):
 
 
 async def main():
-    """Demonstrate concurrent task execution."""
+    """並行タスク実行のデモ。"""
     agent = SimpleAIAgent(name="SimpleAI", max_concurrent_tasks=5)
-    
-    # Create various tasks
+
+    # 様々なタスクを作成
     tasks = [
-        Task(id="1", name="Generate story", data={"type": "generate", "prompt": "Write a short story"}),
-        Task(id="2", name="Analyze sentiment", data={"type": "analyze", "content": "I love this!"}),
-        Task(id="3", name="Generate code", data={"type": "generate", "prompt": "Python function"}),
-        Task(id="4", name="Analyze data", data={"type": "analyze", "content": "Sales data"}),
+        Task(
+            id="1",
+            name="Generate story",
+            data={"type": "generate", "prompt": "Write a short story"},
+        ),
+        Task(
+            id="2",
+            name="Analyze sentiment",
+            data={"type": "analyze", "content": "I love this!"},
+        ),
+        Task(
+            id="3",
+            name="Generate code",
+            data={"type": "generate", "prompt": "Python function"},
+        ),
+        Task(
+            id="4",
+            name="Analyze data",
+            data={"type": "analyze", "content": "Sales data"},
+        ),
         Task(id="5", name="Custom task", data={"type": "custom"}),
     ]
-    
+
     print(f"Starting {len(tasks)} tasks concurrently...")
     start_time = asyncio.get_event_loop().time()
-    
-    # Run all tasks concurrently
+
+    # すべてのタスクを並行実行
     results = await agent.run_tasks(tasks)
-    
+
     end_time = asyncio.get_event_loop().time()
-    
-    # Display results
+
+    # 結果を表示
     print(f"\nCompleted all tasks in {end_time - start_time:.2f} seconds")
     print("\nResults:")
     for task_id, task in results.items():

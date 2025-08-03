@@ -27,28 +27,84 @@ For example:
 
 ## 必要環境 / Requirements
 
-- Python 3.11 or higher
+- Python 3.12 or higher
+- Node.js 18+ (for frontend dashboard)
+- Docker and Docker Compose
 - uv (for dependency management)
 
-## インストール / Installation
+## 🚀 Quick Start / クイックスタート
+
+### Option 1: Full Stack with Docker (Recommended) / Docker全スタック（推奨）
 
 ```bash
-# リポジトリをクローン / Clone the repository
+# Clone repository / リポジトリをクローン
 git clone https://github.com/Daku-on/python-taskgroup-ai-agent.git
 cd python-taskgroup-ai-agent
 
-# 依存関係をインストール / Install dependencies
-uv sync
-
-# 開発用依存関係も含める場合 / For development dependencies
-uv sync --group dev
-
-# 環境変数を設定 / Set up environment variables
-cp .env.example .env
-# .envファイルを編集してAPIキーを追加 / Edit .env file and add your API keys
+# One-command startup / 一発起動
+make full
+# or / または
+./scripts/start-full-stack.sh
 ```
 
-## Quick Start
+**🌐 Access URLs / アクセスURL:**
+- 📊 **Frontend Dashboard**: http://localhost:3000
+- 🔧 **Backend API**: http://localhost:8000  
+- 📖 **API Documentation**: http://localhost:8000/docs
+
+### Option 2: Development Environment / 開発環境
+
+```bash
+# Install dependencies / 依存関係インストール
+make install
+
+# Start database only / データベースのみ起動
+make dev
+
+# In separate terminals / 別ターミナルで:
+make backend   # Backend API server
+make frontend  # Frontend development server
+```
+
+**🌐 Access URLs (Dev) / アクセスURL（開発）:**
+- 📊 **Frontend**: http://localhost:5173
+- 🔧 **Backend**: http://localhost:8000
+
+### Configuration / 設定
+
+```bash
+# Edit .env file / .envファイルを編集
+cp .env.example .env
+# Add your API keys / APIキーを追加:
+# OPENAI_API_KEY=your-key-here
+# OPENAI_MODEL=gpt-3.5-turbo
+```
+
+### Available Commands / 利用可能なコマンド
+
+```bash
+make help     # Show all commands / 全コマンド表示
+make full     # Start full stack / 全スタック起動  
+make dev      # Development mode / 開発モード
+make stop     # Stop all services / 全サービス停止
+make test     # Run tests / テスト実行
+make lint     # Code quality / コード品質チェック
+```
+
+## Dashboard Features / ダッシュボード機能
+
+### 📊 Web Dashboard
+- **Task Execution**: Execute AI tasks with different agent types (LLM, Database, RAG)
+- **Real-time Monitoring**: Live service status and performance metrics
+- **Service Management**: Monitor health, metrics, and resource usage
+- **WebSocket Updates**: Real-time notifications and status updates
+
+### 🤖 Agent Types / エージェントタイプ
+- **LLM Agent**: Direct OpenAI/LLM API calls
+- **Database Agent**: PostgreSQL knowledge base search
+- **RAG Agent**: Retrieval-Augmented Generation with smart decision making
+
+## Programming Examples / プログラミング例
 
 ### Basic Agent Example
 
